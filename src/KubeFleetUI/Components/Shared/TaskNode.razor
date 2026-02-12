@@ -1,0 +1,56 @@
+<div class="task-node @GetTaskClass()">
+    <div class="task-type">
+        @(TaskPosition == "before" ? "Before" : "After"): @Task.Type
+    </div>
+    @if (Task.Type == StageTaskType.Approval)
+    {
+        <div class="task-detail">
+            @if (!string.IsNullOrEmpty(Task.ApprovalRequestName))
+            {
+                <span>@Task.ApprovalRequestName</span>
+            }
+            @if (IsPendingApproval())
+            {
+                <FluentButton Size="ButtonSize.Small" Appearance="Appearance.Accent"
+                              OnClick="@(() => OnApprove.InvokeAsync(Task.ApprovalRequestName ?? string.Empty))">
+                    Approve
+                </FluentButton>
+            }
+        </div>
+    }
+    @if (Task.Type == StageTaskType.TimedWait)
+    {
+        <div class="task-detail">Wait</div>
+    }
+    @if (Task.Conditions != null)
+    {
+        @foreach (var c in Task.Conditions)
+        {
+            <div class="task-condition @(c.Status == "True" ? "cond-true" : "cond-false")">
+                @c.Type: @c.Status
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public StageTaskStatus Task { get; set; } = new();
+    [Parameter] public string TaskPosition { get; set; } = "after";
+    [Parameter] public EventCallback<string> OnApprove { get; set; }
+
+    private bool IsPendingApproval()
+    {
+        if (Task.Type != StageTaskType.Approval) return false;
+        var approved = Task.Conditions?.FirstOrDefault(c => c.Type == "ApprovalRequestApproved");
+        return approved == null || approved.Status != "True";
+    }
+
+    private string GetTaskClass()
+    {
+        var allDone = Task.Conditions?.All(c => c.Status == "True") ?? false;
+        if (allDone && Task.Conditions?.Any() == true) return "task-completed";
+
+        if (Task.Conditions?.Any() == true) return "task-waiting";
+        return "task-pending";
+    }
+}

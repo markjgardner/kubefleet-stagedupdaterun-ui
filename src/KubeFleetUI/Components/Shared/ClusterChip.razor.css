@@ -1,0 +1,32 @@
+.cluster-chip {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: 500;
+    cursor: default;
+}
+
+.chip-succeeded {
+    background: #dff6dd;
+    color: #0e700e;
+    border: 1px solid #0e700e;
+}
+
+.chip-failed {
+    background: #fde7e9;
+    color: #c50f1f;
+    border: 1px solid #c50f1f;
+}
+
+.chip-started {
+    background: #deecf9;
+    color: #0078d4;
+    border: 1px solid #0078d4;
+}
+
+.chip-pending {
+    background: #edebe9;
+    color: #605e5c;
+    border: 1px solid #8a8886;
+}

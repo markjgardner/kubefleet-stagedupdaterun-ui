@@ -1,0 +1,44 @@
+.detail-header {
+    margin-bottom: 1.5rem;
+}
+
+.header-info {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin: 0.5rem 0;
+}
+
+.header-conditions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.pipeline {
+    display: flex;
+    align-items: center;
+    overflow-x: auto;
+    padding: 2rem 0;
+    gap: 0;
+}
+
+.pipeline-node {
+    border: 2px solid #0078d4;
+    border-radius: 8px;
+    padding: 1rem;
+    min-width: 150px;
+    text-align: center;
+    background: #f3f2f1;
+    flex-shrink: 0;
+}
+
+.strategy-node {
+    background: #e1dfdd;
+    border-color: #605e5c;
+}
+
+.done-node {
+    background: #dff6dd;
+    border-color: #0e700e;
+}

@@ -1,0 +1,48 @@
+<div class="stage-node @GetStageClass()">
+    <div class="stage-header">
+        <strong>@(IsDeletionStage ? "Deletion Stage" : Stage.StageName)</strong>
+        @if (Stage.StartTime.HasValue)
+        {
+            <span class="stage-time">@Stage.StartTime.Value.ToString("HH:mm:ss")</span>
+        }
+    </div>
+    <div class="stage-clusters">
+        @foreach (var cluster in Stage.Clusters)
+        {
+            <ClusterChip Cluster="@cluster" />
+        }
+    </div>
+    @if (Stage.Conditions != null)
+    {
+        <div class="stage-conditions">
+            @foreach (var c in Stage.Conditions)
+            {
+                <span class="condition @GetConditionClass(c)">@c.Type: @c.Status</span>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public StageUpdatingStatus Stage { get; set; } = new();
+    [Parameter] public bool IsDeletionStage { get; set; }
+
+    private string GetStageClass()
+    {
+        var succeeded = Stage.Conditions?.FirstOrDefault(c => c.Type == "Succeeded");
+        if (succeeded?.Status == "True") return "stage-succeeded";
+
+        var progressing = Stage.Conditions?.FirstOrDefault(c => c.Type == "Progressing");
+        if (progressing?.Status == "True") return "stage-active";
+        if (progressing?.Status == "False") return "stage-waiting";
+
+        return Stage.StartTime.HasValue ? "stage-active" : "stage-pending";
+    }
+
+    private string GetConditionClass(Condition c) => c.Status switch
+    {
+        "True" => "condition-true",
+        "False" => "condition-false",
+        _ => "condition-unknown"
+    };
+}

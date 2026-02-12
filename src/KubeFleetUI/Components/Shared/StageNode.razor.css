@@ -1,0 +1,76 @@
+.stage-node {
+    border: 2px solid #0078d4;
+    border-radius: 8px;
+    padding: 0.75rem;
+    min-width: 180px;
+    max-width: 300px;
+    background: #f3f2f1;
+    flex-shrink: 0;
+}
+
+.stage-succeeded {
+    border-color: #0e700e;
+    background: #dff6dd;
+}
+
+.stage-active {
+    border-color: #0078d4;
+    background: #deecf9;
+    animation: pulse 2s infinite;
+}
+
+.stage-waiting {
+    border-color: #c19c00;
+    background: #fff4ce;
+}
+
+.stage-pending {
+    border-color: #8a8886;
+    background: #edebe9;
+}
+
+.stage-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.stage-time {
+    font-size: 0.8em;
+    color: #605e5c;
+}
+
+.stage-clusters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 0.5rem;
+}
+
+.stage-conditions {
+    font-size: 0.75em;
+}
+
+.condition {
+    display: inline-block;
+    padding: 1px 4px;
+    border-radius: 3px;
+    margin-right: 4px;
+}
+
+.condition-true {
+    color: #0e700e;
+}
+
+.condition-false {
+    color: #c50f1f;
+}
+
+.condition-unknown {
+    color: #616161;
+}
+
+@@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}

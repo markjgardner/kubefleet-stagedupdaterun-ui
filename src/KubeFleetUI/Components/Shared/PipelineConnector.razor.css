@@ -1,0 +1,18 @@
+.pipeline-connector {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    padding: 0 2px;
+}
+
+.connector-line {
+    width: 24px;
+    height: 2px;
+    background: #0078d4;
+}
+
+.connector-arrow {
+    color: #0078d4;
+    font-size: 0.8em;
+    margin-left: -2px;
+}
