@@ -11,7 +11,7 @@ public class KubernetesClientFactoryTests
     private readonly Mock<ILogger<KubernetesClientFactory>> _loggerMock = new();
 
     [Fact]
-    public void CreateClient_WithCertificateAuthorityData_SetsSkipTlsVerifyFalse()
+    public void CreateClient_WithCertificateAuthorityData_Succeeds()
     {
         // A minimal self-signed DER certificate encoded as base64
         var certBase64 = GenerateSelfSignedCertBase64();
@@ -62,6 +62,23 @@ public class KubernetesClientFactoryTests
 
         var client = factory.CreateClient();
         Assert.NotNull(client);
+    }
+
+    [Fact]
+    public void CreateClient_WithInvalidCertificateAuthorityData_ThrowsDescriptiveError()
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Kubernetes:ApiServerUrl"] = "https://test-server:6443",
+                ["Kubernetes:CertificateAuthorityData"] = "bm90LWEtdmFsaWQtY2VydA=="
+            })
+            .Build();
+
+        var factory = new KubernetesClientFactory(config, _loggerMock.Object);
+
+        var ex = Assert.Throws<InvalidOperationException>(() => factory.CreateClient());
+        Assert.Contains("Kubernetes:CertificateAuthorityData", ex.Message);
     }
 
     private static string GenerateSelfSignedCertBase64()

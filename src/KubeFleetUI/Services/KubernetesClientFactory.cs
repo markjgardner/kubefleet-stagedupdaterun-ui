@@ -37,9 +37,18 @@ public class KubernetesClientFactory : IKubernetesClientFactory
         var certAuthorityData = _configuration["Kubernetes:CertificateAuthorityData"];
         if (!string.IsNullOrEmpty(certAuthorityData))
         {
-            var certBytes = Convert.FromBase64String(certAuthorityData);
-            var caCert = X509CertificateLoader.LoadCertificate(certBytes);
-            clientConfig.SslCaCerts = new X509Certificate2Collection { caCert };
+            try
+            {
+                var certBytes = Convert.FromBase64String(certAuthorityData);
+                var caCert = X509CertificateLoader.LoadCertificate(certBytes);
+                clientConfig.SslCaCerts = new X509Certificate2Collection { caCert };
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    "Failed to load certificate from 'Kubernetes:CertificateAuthorityData' configuration. " +
+                    "Ensure the value is a valid base64-encoded certificate.", ex);
+            }
         }
 
         return new Kubernetes(clientConfig);
