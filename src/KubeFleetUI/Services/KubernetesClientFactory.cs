@@ -1,3 +1,4 @@
+using System.Security.Cryptography.X509Certificates;
 using Azure.Identity;
 using k8s;
 
@@ -32,6 +33,23 @@ public class KubernetesClientFactory : IKubernetesClientFactory
             Host = apiServerUrl,
             AccessToken = GetAccessToken()
         };
+
+        var certAuthorityData = _configuration["Kubernetes:CertificateAuthorityData"];
+        if (!string.IsNullOrEmpty(certAuthorityData))
+        {
+            try
+            {
+                var certBytes = Convert.FromBase64String(certAuthorityData);
+                var caCert = X509CertificateLoader.LoadCertificate(certBytes);
+                clientConfig.SslCaCerts = new X509Certificate2Collection { caCert };
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    "Failed to load certificate from 'Kubernetes:CertificateAuthorityData' configuration. " +
+                    "Ensure the value is a valid base64-encoded certificate.", ex);
+            }
+        }
 
         return new Kubernetes(clientConfig);
     }
