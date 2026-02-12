@@ -1,9 +1,11 @@
 using KubeFleetUI.Dapr;
 using KubeFleetUI.Services;
+using Microsoft.FluentUI.AspNetCore.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add Fluent UI
+builder.Services.AddFluentUIComponents();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
