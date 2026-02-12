@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/KubeFleetUI.Tests/KubeFleetUI.Tests.csproj" />
+    <Project Path="src/KubeFleetUI/KubeFleetUI.csproj" />
+  </Folder>
+</Solution>
