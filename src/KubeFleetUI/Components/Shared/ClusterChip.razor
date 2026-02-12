@@ -1,0 +1,27 @@
+<span class="cluster-chip @GetChipClass()" title="@GetTooltip()">
+    @Cluster.ClusterName
+</span>
+
+@code {
+    [Parameter] public ClusterUpdatingStatus Cluster { get; set; } = new();
+
+    private string GetChipClass()
+    {
+        var succeeded = Cluster.Conditions?.FirstOrDefault(c => c.Type == "Succeeded");
+        if (succeeded?.Status == "True") return "chip-succeeded";
+        if (succeeded?.Status == "False") return "chip-failed";
+
+        var started = Cluster.Conditions?.FirstOrDefault(c => c.Type == "Started");
+        if (started?.Status == "True") return "chip-started";
+
+        return "chip-pending";
+    }
+
+    private string GetTooltip()
+    {
+        if (Cluster.Conditions == null || !Cluster.Conditions.Any())
+            return $"{Cluster.ClusterName}: Not started";
+
+        return string.Join("\n", Cluster.Conditions.Select(c => $"{c.Type}: {c.Status} - {c.Message}"));
+    }
+}

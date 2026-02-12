@@ -1,0 +1,117 @@
+@page "/"
+@inject IUpdateRunService UpdateRunService
+@inject NavigationManager Navigation
+
+<PageTitle>Dashboard - KubeFleet UI</PageTitle>
+
+<h1>Staged Update Runs</h1>
+
+<FluentToolbar>
+    <FluentButton Appearance="Appearance.Accent" OnClick="@(() => Navigation.NavigateTo("/create"))">
+        Create New Run
+    </FluentButton>
+    <FluentButton Appearance="Appearance.Outline" OnClick="@LoadRuns">
+        Refresh
+    </FluentButton>
+</FluentToolbar>
+
+@if (_loading)
+{
+    <FluentProgress />
+}
+else if (_error != null)
+{
+    <FluentMessageBar Title="Error" Intent="MessageIntent.Error">
+        @_error
+    </FluentMessageBar>
+}
+else
+{
+    <FluentDataGrid Items="@_runs" ResizableColumns="true" Style="margin-top: 1rem;">
+        <PropertyColumn Property="@(r => r.Metadata.Name)" Title="Name" Sortable="true" />
+        <PropertyColumn Property="@(r => r.Metadata.Namespace)" Title="Namespace" Sortable="true" />
+        <PropertyColumn Property="@(r => r.Spec.PlacementName)" Title="Placement" Sortable="true" />
+        <PropertyColumn Property="@(r => r.Spec.StagedUpdateStrategyName)" Title="Strategy" Sortable="true" />
+        <TemplateColumn Title="State">
+            <FluentBadge Appearance="Appearance.Accent">@context.Spec.State</FluentBadge>
+        </TemplateColumn>
+        <TemplateColumn Title="Initialized">
+            @{
+                var init = GetConditionStatus(context, "Initialized");
+            }
+            <FluentBadge BackgroundColor="@GetStatusColor(init)">@init</FluentBadge>
+        </TemplateColumn>
+        <TemplateColumn Title="Progressing">
+            @{
+                var prog = GetConditionStatus(context, "Progressing");
+            }
+            <FluentBadge BackgroundColor="@GetStatusColor(prog)">@prog</FluentBadge>
+        </TemplateColumn>
+        <TemplateColumn Title="Succeeded">
+            @{
+                var succ = GetConditionStatus(context, "Succeeded");
+            }
+            <FluentBadge BackgroundColor="@GetStatusColor(succ)">@succ</FluentBadge>
+        </TemplateColumn>
+        <TemplateColumn Title="Age">
+            @FormatAge(context.Metadata.CreationTimestamp)
+        </TemplateColumn>
+        <TemplateColumn Title="Actions">
+            <FluentButton Appearance="Appearance.Lightweight" OnClick="@(() => Navigation.NavigateTo($"/run/{context.Metadata.Namespace}/{context.Metadata.Name}"))">
+                View
+            </FluentButton>
+        </TemplateColumn>
+    </FluentDataGrid>
+}
+
+@code {
+    private IQueryable<StagedUpdateRun>? _runs;
+    private bool _loading = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRuns();
+    }
+
+    private async Task LoadRuns()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            var list = await UpdateRunService.ListAsync();
+            _runs = list.AsQueryable();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private string GetConditionStatus(StagedUpdateRun run, string conditionType)
+    {
+        var condition = run.Status?.Conditions?.FirstOrDefault(c => c.Type == conditionType);
+        return condition?.Status ?? "—";
+    }
+
+    private string GetStatusColor(string status) => status switch
+    {
+        "True" => "#0E700E",
+        "False" => "#C50F1F",
+        _ => "#616161"
+    };
+
+    private string FormatAge(DateTime? created)
+    {
+        if (created == null) return "—";
+        var age = DateTime.UtcNow - created.Value;
+        if (age.TotalDays >= 1) return $"{(int)age.TotalDays}d";
+        if (age.TotalHours >= 1) return $"{(int)age.TotalHours}h";
+        return $"{(int)age.TotalMinutes}m";
+    }
+}

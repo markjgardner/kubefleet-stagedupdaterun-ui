@@ -1,0 +1,46 @@
+.task-node {
+    border: 2px solid #8a8886;
+    border-radius: 8px;
+    padding: 0.5rem;
+    min-width: 120px;
+    text-align: center;
+    flex-shrink: 0;
+    font-size: 0.85em;
+}
+
+.task-completed {
+    border-color: #0e700e;
+    background: #dff6dd;
+}
+
+.task-waiting {
+    border-color: #c19c00;
+    background: #fff4ce;
+}
+
+.task-pending {
+    border-color: #8a8886;
+    background: #edebe9;
+}
+
+.task-type {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.task-detail {
+    margin: 4px 0;
+}
+
+.task-condition {
+    font-size: 0.8em;
+    margin-top: 2px;
+}
+
+.cond-true {
+    color: #0e700e;
+}
+
+.cond-false {
+    color: #c50f1f;
+}

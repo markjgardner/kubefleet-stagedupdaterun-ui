@@ -1,0 +1,106 @@
+@page "/create"
+@inject IUpdateRunService UpdateRunService
+@inject IStrategyService StrategyService
+@inject NavigationManager Navigation
+
+<PageTitle>Create Update Run - KubeFleet UI</PageTitle>
+
+<h1>Create Staged Update Run</h1>
+
+@if (_error != null)
+{
+    <FluentMessageBar Title="Error" Intent="MessageIntent.Error">@_error</FluentMessageBar>
+}
+
+<EditForm Model="@_model" OnValidSubmit="@HandleSubmit" FormName="create-run">
+    <DataAnnotationsValidator />
+    <FluentStack Orientation="Orientation.Vertical" VerticalGap="16">
+        <div>
+            <FluentTextField @bind-Value="_model.Name" Label="Name" Required="true" Style="width: 100%;" />
+        </div>
+        <div>
+            <FluentTextField @bind-Value="_model.Namespace" Label="Namespace" Style="width: 100%;" />
+        </div>
+        <div>
+            <FluentTextField @bind-Value="_model.PlacementName" Label="Placement Name" Required="true" Style="width: 100%;" />
+        </div>
+        <div>
+            <FluentSelect @bind-Value="_model.StrategyName" Label="Strategy" TOption="string" Items="@_strategyNames" Style="width: 100%;" />
+        </div>
+        <div>
+            <FluentTextField @bind-Value="_model.ResourceSnapshotIndex" Label="Resource Snapshot Index (optional)" Style="width: 100%;" />
+        </div>
+        <div>
+            <FluentSelect @bind-Value="_model.InitialState" Label="Initial State" TOption="string" Items="@_states" Style="width: 100%;" />
+        </div>
+        <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Loading="@_submitting">
+            Create
+        </FluentButton>
+    </FluentStack>
+</EditForm>
+
+@code {
+    private CreateRunModel _model = new();
+    private List<string> _strategyNames = new();
+    private List<string> _states = new() { "Initialize", "Run" };
+    private bool _submitting;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var strategies = await StrategyService.ListAsync();
+            _strategyNames = strategies.Select(s => s.Metadata.Name).ToList();
+        }
+        catch
+        {
+            // Strategy list may fail if not connected
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        _submitting = true;
+        _error = null;
+        try
+        {
+            var run = new StagedUpdateRun
+            {
+                Metadata = new ResourceMetadata
+                {
+                    Name = _model.Name,
+                    Namespace = string.IsNullOrWhiteSpace(_model.Namespace) ? null : _model.Namespace
+                },
+                Spec = new UpdateRunSpec
+                {
+                    PlacementName = _model.PlacementName,
+                    StagedUpdateStrategyName = _model.StrategyName,
+                    ResourceSnapshotIndex = string.IsNullOrWhiteSpace(_model.ResourceSnapshotIndex) ? null : _model.ResourceSnapshotIndex,
+                    State = Enum.Parse<UpdateRunState>(_model.InitialState)
+                }
+            };
+
+            var created = await UpdateRunService.CreateAsync(run);
+            Navigation.NavigateTo($"/run/{created.Metadata.Namespace}/{created.Metadata.Name}");
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+
+    private class CreateRunModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Namespace { get; set; } = string.Empty;
+        public string PlacementName { get; set; } = string.Empty;
+        public string StrategyName { get; set; } = string.Empty;
+        public string ResourceSnapshotIndex { get; set; } = string.Empty;
+        public string InitialState { get; set; } = "Initialize";
+    }
+}

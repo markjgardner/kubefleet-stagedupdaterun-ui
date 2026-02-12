@@ -1,0 +1,31 @@
+<FluentDialog @bind-Hidden="@_hidden" Modal="true" TrapFocus="true">
+    <FluentDialogHeader>@Title</FluentDialogHeader>
+    <FluentDialogBody>
+        <p>@Message</p>
+    </FluentDialogBody>
+    <FluentDialogFooter>
+        <FluentButton Appearance="Appearance.Accent" OnClick="@HandleConfirm">Confirm</FluentButton>
+        <FluentButton Appearance="Appearance.Neutral" OnClick="@HandleCancel">Cancel</FluentButton>
+    </FluentDialogFooter>
+</FluentDialog>
+
+@code {
+    [Parameter] public string Title { get; set; } = "Confirm";
+    [Parameter] public string Message { get; set; } = "Are you sure?";
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private bool _hidden = false;
+
+    private async Task HandleConfirm()
+    {
+        _hidden = true;
+        await OnConfirm.InvokeAsync();
+    }
+
+    private async Task HandleCancel()
+    {
+        _hidden = true;
+        await OnCancel.InvokeAsync();
+    }
+}
