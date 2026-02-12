@@ -130,9 +130,10 @@ public class UpdateRunService : IUpdateRunService
         if (stream == null) yield break;
 
         using var reader = new System.IO.StreamReader(stream, Encoding.UTF8);
-        while (!ct.IsCancellationRequested && !reader.EndOfStream)
+        while (!ct.IsCancellationRequested)
         {
             var line = await reader.ReadLineAsync(ct);
+            if (line == null) break;
             if (string.IsNullOrWhiteSpace(line)) continue;
 
             var watchEvent = JsonSerializer.Deserialize<WatchEvent<StagedUpdateRun>>(line);
