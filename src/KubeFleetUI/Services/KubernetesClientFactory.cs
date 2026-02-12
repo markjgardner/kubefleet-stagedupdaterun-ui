@@ -41,7 +41,9 @@ public class KubernetesClientFactory : IKubernetesClientFactory
         try
         {
             var credential = new DefaultAzureCredential();
-            var tokenRequestContext = new Azure.Core.TokenRequestContext(new[] { "6dae42f8-4368-4678-94ff-3960e28e3630/.default" });
+            // Azure Kubernetes Service AAD server application ID
+            var scope = _configuration["Kubernetes:AadScope"] ?? "6dae42f8-4368-4678-94ff-3960e28e3630/.default";
+            var tokenRequestContext = new Azure.Core.TokenRequestContext(new[] { scope });
             var token = credential.GetToken(tokenRequestContext);
             return token.Token;
         }

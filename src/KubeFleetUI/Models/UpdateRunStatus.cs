@@ -14,7 +14,7 @@ public class UpdateRunStatus
     public string? ResourceSnapshotIndexUsed { get; set; }
 
     [JsonPropertyName("appliedStrategy")]
-    public object? ApplyStrategy { get; set; }
+    public object? AppliedStrategy { get; set; }
 
     [JsonPropertyName("stagedUpdateStrategySnapshot")]
     public UpdateStrategySpec? UpdateStrategySnapshot { get; set; }
