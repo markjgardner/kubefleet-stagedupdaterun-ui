@@ -1,5 +1,8 @@
+using System.Net;
+using System.Net.Http;
 using System.Text.Json;
 using k8s;
+using k8s.Autorest;
 using KubeFleetUI.Models;
 using KubeFleetUI.Services;
 using Microsoft.Extensions.Configuration;
@@ -35,6 +38,15 @@ public class StrategyServiceTests
         _service = new StrategyService(_factoryMock.Object, config, logger.Object);
     }
 
+    private static HttpOperationResponse<object> WrapResponse(object body)
+    {
+        return new HttpOperationResponse<object>
+        {
+            Body = body,
+            Response = new HttpResponseMessage(HttpStatusCode.OK)
+        };
+    }
+
     [Fact]
     public async Task ListAsync_ReturnsStrategies()
     {
@@ -56,12 +68,14 @@ public class StrategyServiceTests
         var kubeList = new KubeList<StagedUpdateStrategy> { Items = strategies };
         var jsonElement = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(kubeList));
 
-        _customObjectsMock.Setup(c => c.ListNamespacedCustomObjectAsync(
+        _customObjectsMock.Setup(c => c.ListNamespacedCustomObjectWithHttpMessagesAsync(
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
             It.IsAny<bool?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
-            It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool?>(),
-            It.IsAny<bool?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(jsonElement);
+            It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int?>(),
+            It.IsAny<bool?>(), It.IsAny<bool?>(),
+            It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(WrapResponse(jsonElement));
 
         var result = await _service.ListAsync();
 
@@ -83,10 +97,12 @@ public class StrategyServiceTests
         };
         var jsonElement = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(strategy));
 
-        _customObjectsMock.Setup(c => c.GetNamespacedCustomObjectAsync(
-            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+        _customObjectsMock.Setup(c => c.GetNamespacedCustomObjectWithHttpMessagesAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
             It.IsAny<CancellationToken>()))
-            .ReturnsAsync(jsonElement);
+            .ReturnsAsync(WrapResponse(jsonElement));
 
         var result = await _service.GetAsync("test-strategy");
 

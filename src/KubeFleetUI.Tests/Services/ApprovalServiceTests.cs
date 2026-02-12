@@ -1,5 +1,8 @@
+using System.Net;
+using System.Net.Http;
 using System.Text.Json;
 using k8s;
+using k8s.Autorest;
 using KubeFleetUI.Models;
 using KubeFleetUI.Services;
 using Microsoft.Extensions.Configuration;
@@ -35,6 +38,15 @@ public class ApprovalServiceTests
         _service = new ApprovalService(_factoryMock.Object, config, logger.Object);
     }
 
+    private static HttpOperationResponse<object> WrapResponse(object body)
+    {
+        return new HttpOperationResponse<object>
+        {
+            Body = body,
+            Response = new HttpResponseMessage(HttpStatusCode.OK)
+        };
+    }
+
     [Fact]
     public async Task ListForRunAsync_ReturnsApprovalRequests()
     {
@@ -49,12 +61,14 @@ public class ApprovalServiceTests
         var kubeList = new KubeList<ApprovalRequest> { Items = approvals };
         var jsonElement = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(kubeList));
 
-        _customObjectsMock.Setup(c => c.ListNamespacedCustomObjectAsync(
+        _customObjectsMock.Setup(c => c.ListNamespacedCustomObjectWithHttpMessagesAsync(
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
             It.IsAny<bool?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
-            It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool?>(),
-            It.IsAny<bool?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(jsonElement);
+            It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int?>(),
+            It.IsAny<bool?>(), It.IsAny<bool?>(),
+            It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(WrapResponse(jsonElement));
 
         var result = await _service.ListForRunAsync("run1");
 
@@ -65,20 +79,22 @@ public class ApprovalServiceTests
     [Fact]
     public async Task ApproveAsync_PatchesStatus()
     {
-        _customObjectsMock.Setup(c => c.PatchNamespacedCustomObjectStatusAsync(
+        _customObjectsMock.Setup(c => c.PatchNamespacedCustomObjectStatusWithHttpMessagesAsync(
             It.IsAny<object>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
             It.IsAny<string>(), It.IsAny<string>(),
-            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool?>(),
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool?>(),
+            It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
             It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new object());
+            .ReturnsAsync(WrapResponse(new object()));
 
         await _service.ApproveAsync("approval1");
 
-        _customObjectsMock.Verify(c => c.PatchNamespacedCustomObjectStatusAsync(
+        _customObjectsMock.Verify(c => c.PatchNamespacedCustomObjectStatusWithHttpMessagesAsync(
             It.IsAny<object>(),
             KubeFleetConstants.Group, KubeFleetConstants.Version, "test-ns",
             KubeFleetConstants.ApprovalRequestPlural, "approval1",
-            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool?>(),
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool?>(),
+            It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 }

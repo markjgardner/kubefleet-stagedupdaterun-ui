@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="KubernetesClient" Version="16.0.1" />
+    <PackageReference Include="KubernetesClient" Version="18.0.13" />
     <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.11.4" />
     <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Icons" Version="4.11.4" />
     <PackageReference Include="Dapr.Client" Version="1.15.3" />

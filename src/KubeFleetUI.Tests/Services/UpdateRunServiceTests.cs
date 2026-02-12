@@ -1,5 +1,8 @@
+using System.Net;
+using System.Net.Http;
 using System.Text.Json;
 using k8s;
+using k8s.Autorest;
 using KubeFleetUI.Models;
 using KubeFleetUI.Services;
 using Microsoft.Extensions.Configuration;
@@ -35,6 +38,15 @@ public class UpdateRunServiceTests
         _service = new UpdateRunService(_factoryMock.Object, config, logger.Object);
     }
 
+    private static HttpOperationResponse<object> WrapResponse(object body)
+    {
+        return new HttpOperationResponse<object>
+        {
+            Body = body,
+            Response = new HttpResponseMessage(HttpStatusCode.OK)
+        };
+    }
+
     [Fact]
     public async Task ListAsync_ReturnsUpdateRuns()
     {
@@ -46,12 +58,14 @@ public class UpdateRunServiceTests
         var kubeList = new KubeList<StagedUpdateRun> { Items = runs };
         var jsonElement = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(kubeList));
 
-        _customObjectsMock.Setup(c => c.ListNamespacedCustomObjectAsync(
+        _customObjectsMock.Setup(c => c.ListNamespacedCustomObjectWithHttpMessagesAsync(
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
             It.IsAny<bool?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
-            It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool?>(),
-            It.IsAny<bool?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(jsonElement);
+            It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int?>(),
+            It.IsAny<bool?>(), It.IsAny<bool?>(),
+            It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(WrapResponse(jsonElement));
 
         var result = await _service.ListAsync();
 
@@ -70,10 +84,12 @@ public class UpdateRunServiceTests
         };
         var jsonElement = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(run));
 
-        _customObjectsMock.Setup(c => c.GetNamespacedCustomObjectAsync(
-            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+        _customObjectsMock.Setup(c => c.GetNamespacedCustomObjectWithHttpMessagesAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
             It.IsAny<CancellationToken>()))
-            .ReturnsAsync(jsonElement);
+            .ReturnsAsync(WrapResponse(jsonElement));
 
         var result = await _service.GetAsync("test-run");
 
@@ -95,11 +111,13 @@ public class UpdateRunServiceTests
         };
         var jsonElement = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(run));
 
-        _customObjectsMock.Setup(c => c.CreateNamespacedCustomObjectAsync(
-            It.IsAny<object>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
-            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+        _customObjectsMock.Setup(c => c.CreateNamespacedCustomObjectWithHttpMessagesAsync(
+            It.IsAny<object>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<bool?>(),
+            It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
             It.IsAny<CancellationToken>()))
-            .ReturnsAsync(jsonElement);
+            .ReturnsAsync(WrapResponse(jsonElement));
 
         var result = await _service.CreateAsync(run);
 
@@ -109,18 +127,22 @@ public class UpdateRunServiceTests
     [Fact]
     public async Task DeleteAsync_DeletesRun()
     {
-        _customObjectsMock.Setup(c => c.DeleteNamespacedCustomObjectAsync(
-            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
-            It.IsAny<int?>(), It.IsAny<bool?>(), It.IsAny<string>(), It.IsAny<k8s.Models.V1DeleteOptions>(),
+        _customObjectsMock.Setup(c => c.DeleteNamespacedCustomObjectWithHttpMessagesAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<string>(), It.IsAny<k8s.Models.V1DeleteOptions>(),
+            It.IsAny<int?>(), It.IsAny<bool?>(), It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
             It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new object());
+            .ReturnsAsync(WrapResponse(new object()));
 
         await _service.DeleteAsync("test-run");
 
-        _customObjectsMock.Verify(c => c.DeleteNamespacedCustomObjectAsync(
+        _customObjectsMock.Verify(c => c.DeleteNamespacedCustomObjectWithHttpMessagesAsync(
             KubeFleetConstants.Group, KubeFleetConstants.Version, "test-ns",
             KubeFleetConstants.StagedUpdateRunPlural, "test-run",
-            It.IsAny<int?>(), It.IsAny<bool?>(), It.IsAny<string>(), It.IsAny<k8s.Models.V1DeleteOptions>(),
+            It.IsAny<k8s.Models.V1DeleteOptions>(),
+            It.IsAny<int?>(), It.IsAny<bool?>(), It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -130,19 +152,23 @@ public class UpdateRunServiceTests
         var kubeList = new KubeList<StagedUpdateRun> { Items = new List<StagedUpdateRun>() };
         var jsonElement = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(kubeList));
 
-        _customObjectsMock.Setup(c => c.ListNamespacedCustomObjectAsync(
-            It.IsAny<string>(), It.IsAny<string>(), "custom-ns", It.IsAny<string>(),
+        _customObjectsMock.Setup(c => c.ListNamespacedCustomObjectWithHttpMessagesAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
             It.IsAny<bool?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
-            It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool?>(),
-            It.IsAny<bool?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(jsonElement);
+            It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int?>(),
+            It.IsAny<bool?>(), It.IsAny<bool?>(),
+            It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(WrapResponse(jsonElement));
 
         await _service.ListAsync("custom-ns");
 
-        _customObjectsMock.Verify(c => c.ListNamespacedCustomObjectAsync(
+        _customObjectsMock.Verify(c => c.ListNamespacedCustomObjectWithHttpMessagesAsync(
             It.IsAny<string>(), It.IsAny<string>(), "custom-ns", It.IsAny<string>(),
             It.IsAny<bool?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
-            It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool?>(),
-            It.IsAny<bool?>(), It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int?>(),
+            It.IsAny<bool?>(), It.IsAny<bool?>(),
+            It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 }
