@@ -29,12 +29,15 @@ jobs:
 
       - name: Install KubeFleet CRDs
         run: |
-          kubectl apply -f test/crds/
+          echo "Installing CRDs from kubefleet repository..."
+          kubectl apply -f https://raw.githubusercontent.com/kubefleet-dev/kubefleet/main/config/crd/bases/placement.kubernetes-fleet.io_stagedupdateruns.yaml
+          kubectl apply -f https://raw.githubusercontent.com/kubefleet-dev/kubefleet/main/config/crd/bases/placement.kubernetes-fleet.io_approvalrequests.yaml
+          kubectl apply -f https://raw.githubusercontent.com/kubefleet-dev/kubefleet/main/config/crd/bases/placement.kubernetes-fleet.io_stagedupdatestrategies.yaml
           echo "Waiting for CRDs to be established..."
           kubectl wait --for condition=established --timeout=60s crd/stagedupdateruns.placement.kubernetes-fleet.io
           kubectl wait --for condition=established --timeout=60s crd/approvalrequests.placement.kubernetes-fleet.io
           kubectl wait --for condition=established --timeout=60s crd/stagedupdatestrategies.placement.kubernetes-fleet.io
-          kubectl get crds
+          kubectl get crds | grep placement.kubernetes-fleet.io
 
       - name: Verify cluster is ready
         run: |

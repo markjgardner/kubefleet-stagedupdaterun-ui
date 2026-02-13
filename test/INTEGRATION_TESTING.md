@@ -29,7 +29,10 @@ Integration tests use the `[Trait("Category", "Integration")]` attribute to dist
 
 2. **Install KubeFleet CRDs**:
    ```bash
-   kubectl apply -f test/crds/
+   # Install CRDs from the official kubefleet repository
+   kubectl apply -f https://raw.githubusercontent.com/kubefleet-dev/kubefleet/main/config/crd/bases/placement.kubernetes-fleet.io_stagedupdateruns.yaml
+   kubectl apply -f https://raw.githubusercontent.com/kubefleet-dev/kubefleet/main/config/crd/bases/placement.kubernetes-fleet.io_approvalrequests.yaml
+   kubectl apply -f https://raw.githubusercontent.com/kubefleet-dev/kubefleet/main/config/crd/bases/placement.kubernetes-fleet.io_stagedupdatestrategies.yaml
    
    # Wait for CRDs to be established
    kubectl wait --for condition=established --timeout=60s \

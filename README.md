@@ -84,7 +84,7 @@ src/
 │   ├── Components/           # Unit tests for components
 │   └── Integration/          # Integration tests with real Kubernetes API
 └── test/                     # Test resources and documentation
-    ├── crds/                 # Sample CRD manifests for testing
+    ├── crds/                 # CRD configuration and documentation
     └── INTEGRATION_TESTING.md  # Integration testing guide
 ```
 
@@ -107,8 +107,10 @@ To run integration tests locally:
 # Create a test cluster with Kind
 kind create cluster --name kubefleet-test
 
-# Install CRDs
-kubectl apply -f test/crds/
+# Install CRDs from kubefleet repository
+kubectl apply -f https://raw.githubusercontent.com/kubefleet-dev/kubefleet/main/config/crd/bases/placement.kubernetes-fleet.io_stagedupdateruns.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubefleet-dev/kubefleet/main/config/crd/bases/placement.kubernetes-fleet.io_approvalrequests.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubefleet-dev/kubefleet/main/config/crd/bases/placement.kubernetes-fleet.io_stagedupdatestrategies.yaml
 
 # Run integration tests
 export KUBECONFIG=~/.kube/config
