@@ -9,7 +9,7 @@ public class UpdateRunDetailTests
     {
         var run = new StagedUpdateRun();
 
-        Assert.Equal("placement.kubefleet.io/v1beta1", run.ApiVersion);
+        Assert.Equal("placement.kubernetes-fleet.io/v1beta1", run.ApiVersion);
         Assert.Equal("StagedUpdateRun", run.Kind);
         Assert.NotNull(run.Metadata);
         Assert.NotNull(run.Spec);
@@ -81,7 +81,7 @@ public class UpdateRunDetailTests
     public void ApprovalRequest_HasCorrectDefaults()
     {
         var ar = new ApprovalRequest();
-        Assert.Equal("placement.kubefleet.io/v1beta1", ar.ApiVersion);
+        Assert.Equal("placement.kubernetes-fleet.io/v1beta1", ar.ApiVersion);
         Assert.Equal("ApprovalRequest", ar.Kind);
     }
 
