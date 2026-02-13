@@ -1,0 +1,59 @@
+name: Integration Tests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  integration-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Create Kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: kubefleet-test
+          wait: 120s
+
+      - name: Install KubeFleet CRDs
+        run: |
+          kubectl apply -f test/crds/
+          echo "Waiting for CRDs to be established..."
+          kubectl wait --for condition=established --timeout=60s crd/stagedupdateruns.placement.kubernetes-fleet.io
+          kubectl wait --for condition=established --timeout=60s crd/approvalrequests.placement.kubernetes-fleet.io
+          kubectl wait --for condition=established --timeout=60s crd/stagedupdatestrategies.placement.kubernetes-fleet.io
+          kubectl get crds
+
+      - name: Verify cluster is ready
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+          kubectl get crds | grep placement.kubernetes-fleet.io
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run integration tests
+        env:
+          KUBECONFIG: ${{ env.KUBECONFIG }}
+        run: |
+          echo "KUBECONFIG is set to: $KUBECONFIG"
+          dotnet test --no-build --configuration Release --filter Category=Integration --verbosity normal --logger "console;verbosity=detailed"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          kind delete cluster --name kubefleet-test || true
