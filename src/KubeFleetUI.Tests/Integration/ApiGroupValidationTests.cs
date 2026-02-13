@@ -29,7 +29,7 @@ public class ApiGroupValidationTests : IClassFixture<KubernetesClusterFixture>
         {
             Metadata = new ResourceMetadata
             {
-                Name = "test-run-" + Guid.NewGuid().ToString("N").Substring(0, 8),
+                Name = "test-run-" + Guid.NewGuid().ToString("N")[..8],
                 Namespace = _fixture.TestNamespace
             },
             Spec = new UpdateRunSpec
@@ -76,7 +76,7 @@ public class ApiGroupValidationTests : IClassFixture<KubernetesClusterFixture>
         {
             Metadata = new ResourceMetadata
             {
-                Name = "test-run-" + Guid.NewGuid().ToString("N").Substring(0, 8),
+                Name = "test-run-" + Guid.NewGuid().ToString("N")[..8],
                 Namespace = _fixture.TestNamespace
             },
             Spec = new UpdateRunSpec
@@ -110,7 +110,7 @@ public class ApiGroupValidationTests : IClassFixture<KubernetesClusterFixture>
         {
             Metadata = new ResourceMetadata
             {
-                Name = "test-approval-" + Guid.NewGuid().ToString("N").Substring(0, 8),
+                Name = "test-approval-" + Guid.NewGuid().ToString("N")[..8],
                 Namespace = _fixture.TestNamespace
             },
             Spec = new ApprovalRequestSpec

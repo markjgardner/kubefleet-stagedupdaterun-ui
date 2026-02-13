@@ -28,8 +28,10 @@ public class KubernetesClusterFixture : IDisposable
         var config = KubernetesClientConfiguration.BuildConfigFromConfigFile(kubeconfigPath);
         Client = new Kubernetes(config);
 
-        // Create a unique test namespace
-        TestNamespace = $"kubefleet-test-{Guid.NewGuid():N}"[..63];
+        // Create a unique test namespace (max 63 chars for DNS-1123)
+        // kubefleet-test- is 15 chars, leave room for 16-char GUID portion
+        var guid = Guid.NewGuid().ToString("N")[..16]; // Take first 16 chars of GUID
+        TestNamespace = $"kubefleet-test-{guid}"; // Total: 31 chars, well under 63 limit
         CreateTestNamespace().GetAwaiter().GetResult();
     }
 
