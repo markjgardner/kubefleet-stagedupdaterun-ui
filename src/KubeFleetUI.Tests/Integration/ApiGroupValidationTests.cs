@@ -196,8 +196,8 @@ public class ApiGroupValidationTests : IClassFixture<KubernetesClusterFixture>
         Assert.Equal("placement.kubernetes-fleet.io", KubeFleetConstants.Group);
         Assert.NotEqual("placement.kubefleet.io", KubeFleetConstants.Group);
         
-        // Verify it's the same as what's in the model
+        // Verify it's the same as what's in the model - use exact match
         var testRun = new StagedUpdateRun();
-        Assert.Contains("placement.kubernetes-fleet.io", testRun.ApiVersion);
+        Assert.Equal("placement.kubernetes-fleet.io/v1beta1", testRun.ApiVersion);
     }
 }

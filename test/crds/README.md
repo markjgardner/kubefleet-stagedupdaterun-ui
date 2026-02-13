@@ -6,7 +6,6 @@ These CRDs define the KubeFleet resources that the UI interacts with:
 - `StagedUpdateRun` - Represents a staged rollout operation
 - `ApprovalRequest` - Represents a request to approve a stage
 - `StagedUpdateStrategy` - Defines rollout strategies
-- `ClusterStagedUpdateStrategy` - Cluster-scoped rollout strategies
 
 ## Using These CRDs
 

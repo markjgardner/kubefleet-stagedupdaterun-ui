@@ -29,7 +29,7 @@ public class KubernetesClusterFixture : IDisposable
         Client = new Kubernetes(config);
 
         // Create a unique test namespace
-        TestNamespace = $"kubefleet-test-{Guid.NewGuid():N}".Substring(0, 63);
+        TestNamespace = $"kubefleet-test-{Guid.NewGuid():N}"[..63];
         CreateTestNamespace().GetAwaiter().GetResult();
     }
 
