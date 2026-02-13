@@ -83,8 +83,7 @@ src/
 │   ├── Services/             # Unit tests for services
 │   ├── Components/           # Unit tests for components
 │   └── Integration/          # Integration tests with real Kubernetes API
-└── test/                     # Test resources and documentation
-    ├── crds/                 # CRD configuration and documentation
+└── test/                     # Test documentation
     └── INTEGRATION_TESTING.md  # Integration testing guide
 ```
 

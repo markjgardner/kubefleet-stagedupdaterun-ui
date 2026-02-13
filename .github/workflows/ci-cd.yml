@@ -1,0 +1,130 @@
+name: CI/CD
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.check.outputs.should_deploy }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run unit tests
+        run: dotnet test --no-build --configuration Release --filter "Category!=Integration" --verbosity normal
+
+      - name: Create Kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: kubefleet-test
+          wait: 120s
+
+      - name: Install KubeFleet CRDs
+        run: |
+          echo "Installing CRDs from kubefleet repository..."
+          kubectl apply -f https://raw.githubusercontent.com/kubefleet-dev/kubefleet/main/config/crd/bases/placement.kubernetes-fleet.io_stagedupdateruns.yaml
+          kubectl apply -f https://raw.githubusercontent.com/kubefleet-dev/kubefleet/main/config/crd/bases/placement.kubernetes-fleet.io_approvalrequests.yaml
+          kubectl apply -f https://raw.githubusercontent.com/kubefleet-dev/kubefleet/main/config/crd/bases/placement.kubernetes-fleet.io_stagedupdatestrategies.yaml
+          echo "Waiting for CRDs to be established..."
+          kubectl wait --for condition=established --timeout=60s crd/stagedupdateruns.placement.kubernetes-fleet.io
+          kubectl wait --for condition=established --timeout=60s crd/approvalrequests.placement.kubernetes-fleet.io
+          kubectl wait --for condition=established --timeout=60s crd/stagedupdatestrategies.placement.kubernetes-fleet.io
+
+      - name: Run integration tests
+        run: |
+          dotnet test --no-build --configuration Release --filter Category=Integration --verbosity normal --logger "console;verbosity=detailed"
+
+      - name: Cleanup Kind cluster
+        if: always()
+        run: |
+          kind delete cluster --name kubefleet-test || true
+
+      - name: Check if should deploy
+        id: check
+        run: |
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  tag-and-push:
+    needs: build-and-test
+    if: needs.build-and-test.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      new_tag: ${{ steps.bump.outputs.new_tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Bump version and create tag
+        id: bump
+        run: |
+          # Get the latest semver tag (vMAJOR.MINOR.PATCH*)
+          latest=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
+          if [ -z "$latest" ]; then
+            new_tag="v0.1.0-pre"
+          else
+            # Strip leading 'v' and any pre-release suffix
+            version="${latest#v}"
+            version="${version%%-*}"
+            IFS='.' read -r major minor patch <<< "$version"
+            patch=$((patch + 1))
+            new_tag="v${major}.${minor}.${patch}-pre"
+          fi
+          echo "new_tag=${new_tag}" >> "$GITHUB_OUTPUT"
+          git tag "$new_tag"
+          git push origin "$new_tag"
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ steps.bump.outputs.new_tag }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: src/KubeFleetUI/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
