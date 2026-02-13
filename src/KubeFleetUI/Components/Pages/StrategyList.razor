@@ -1,5 +1,6 @@
 @page "/strategies"
 @inject IStrategyService StrategyService
+@inject IClusterStrategyService ClusterStrategyService
 
 <PageTitle>Strategies - KubeFleet UI</PageTitle>
 
@@ -30,10 +31,39 @@ else
     </FluentDataGrid>
 }
 
+<h1>Cluster Staged Update Strategies</h1>
+
+@if (_clusterLoading)
+{
+    <FluentProgress />
+}
+else if (_clusterError != null)
+{
+    <FluentMessageBar Title="Error" Intent="MessageIntent.Error">@_clusterError</FluentMessageBar>
+}
+else
+{
+    <FluentDataGrid Items="@_clusterStrategies" ResizableColumns="true">
+        <PropertyColumn Property="@(s => s.Metadata.Name)" Title="Name" Sortable="true" />
+        <TemplateColumn Title="Stages">
+            @context.Spec.Stages.Count
+        </TemplateColumn>
+        <TemplateColumn Title="Stage Names">
+            @string.Join(", ", context.Spec.Stages.Select(s => s.Name))
+        </TemplateColumn>
+        <TemplateColumn Title="Age">
+            @FormatAge(context.Metadata.CreationTimestamp)
+        </TemplateColumn>
+    </FluentDataGrid>
+}
+
 @code {
     private IQueryable<StagedUpdateStrategy>? _strategies;
+    private IQueryable<ClusterStagedUpdateStrategy>? _clusterStrategies;
     private bool _loading = true;
+    private bool _clusterLoading = true;
     private string? _error;
+    private string? _clusterError;
 
     protected override async Task OnInitializedAsync()
     {
@@ -49,6 +79,20 @@ else
         finally
         {
             _loading = false;
+        }
+
+        try
+        {
+            var clusterList = await ClusterStrategyService.ListAsync();
+            _clusterStrategies = clusterList.AsQueryable();
+        }
+        catch (Exception ex)
+        {
+            _clusterError = ex.Message;
+        }
+        finally
+        {
+            _clusterLoading = false;
         }
     }
 
