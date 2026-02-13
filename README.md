@@ -17,7 +17,6 @@ A Blazor Server web application for managing staged application rollouts across 
 - **UI Library**: Microsoft Fluent UI Blazor Components
 - **Kubernetes Client**: KubernetesClient (C#) for custom resource operations
 - **Authentication**: Azure Workload Identity via DefaultAzureCredential
-- **Optional**: Dapr integration for state and secret management
 
 ## Getting Started
 
@@ -73,8 +72,7 @@ src/
 ├── KubeFleetUI/              # Blazor Server application
 │   ├── Components/           # Razor components (pages, layout, shared)
 │   ├── Models/               # C# POCOs for KubeFleet CRDs
-│   ├── Services/             # Kubernetes service layer
-│   └── Dapr/                 # Optional Dapr integration
+│   └── Services/             # Kubernetes service layer
 └── KubeFleetUI.Tests/        # xUnit test project
 ```
 
