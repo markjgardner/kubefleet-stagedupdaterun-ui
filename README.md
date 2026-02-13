@@ -39,6 +39,12 @@ dotnet build
 # Run tests
 dotnet test
 
+# Run only unit tests (skip integration tests)
+dotnet test --filter Category!=Integration
+
+# Run integration tests (requires Kubernetes cluster)
+dotnet test --filter Category=Integration
+
 # Run the application
 cd src/KubeFleetUI
 dotnet run
@@ -74,6 +80,41 @@ src/
 │   ├── Models/               # C# POCOs for KubeFleet CRDs
 │   └── Services/             # Kubernetes service layer
 └── KubeFleetUI.Tests/        # xUnit test project
+    ├── Services/             # Unit tests for services
+    ├── Components/           # Unit tests for components
+    └── Integration/          # Integration tests with real Kubernetes API
+```
+
+## Testing
+
+The project includes both unit tests and integration tests:
+
+### Unit Tests
+Unit tests use Moq to mock Kubernetes clients and validate logic without requiring a cluster.
+
+```bash
+dotnet test --filter Category!=Integration
+```
+
+### Integration Tests
+Integration tests validate API group references against a real Kubernetes API server. These tests help catch errors like using incorrect API groups (e.g., `placement.kubefleet.io` instead of `placement.kubernetes-fleet.io`).
+
+To run integration tests locally:
+```bash
+# Create a test cluster with Kind
+kind create cluster --name kubefleet-test
+
+# Install CRDs from kubefleet repository
+kubectl apply -f https://raw.githubusercontent.com/kubefleet-dev/kubefleet/main/config/crd/bases/placement.kubernetes-fleet.io_stagedupdateruns.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubefleet-dev/kubefleet/main/config/crd/bases/placement.kubernetes-fleet.io_approvalrequests.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubefleet-dev/kubefleet/main/config/crd/bases/placement.kubernetes-fleet.io_stagedupdatestrategies.yaml
+
+# Run integration tests
+export KUBECONFIG=~/.kube/config
+dotnet test --filter Category=Integration
+
+# Cleanup
+kind delete cluster --name kubefleet-test
 ```
 
 ## License
