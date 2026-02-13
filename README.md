@@ -79,12 +79,10 @@ src/
 │   ├── Components/           # Razor components (pages, layout, shared)
 │   ├── Models/               # C# POCOs for KubeFleet CRDs
 │   └── Services/             # Kubernetes service layer
-├── KubeFleetUI.Tests/        # xUnit test project
-│   ├── Services/             # Unit tests for services
-│   ├── Components/           # Unit tests for components
-│   └── Integration/          # Integration tests with real Kubernetes API
-└── test/                     # Test documentation
-    └── INTEGRATION_TESTING.md  # Integration testing guide
+└── KubeFleetUI.Tests/        # xUnit test project
+    ├── Services/             # Unit tests for services
+    ├── Components/           # Unit tests for components
+    └── Integration/          # Integration tests with real Kubernetes API
 ```
 
 ## Testing
@@ -118,8 +116,6 @@ dotnet test --filter Category=Integration
 # Cleanup
 kind delete cluster --name kubefleet-test
 ```
-
-See [test/INTEGRATION_TESTING.md](test/INTEGRATION_TESTING.md) for detailed instructions.
 
 ## License
 
