@@ -47,8 +47,6 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Run integration tests
-        env:
-          KUBECONFIG: ${{ env.KUBECONFIG }}
         run: |
           echo "KUBECONFIG is set to: $KUBECONFIG"
           dotnet test --no-build --configuration Release --filter Category=Integration --verbosity normal --logger "console;verbosity=detailed"
