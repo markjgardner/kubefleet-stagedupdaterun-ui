@@ -1,6 +1,7 @@
 @page "/create"
 @inject IUpdateRunService UpdateRunService
 @inject IStrategyService StrategyService
+@inject IClusterStrategyService ClusterStrategyService
 @inject NavigationManager Navigation
 
 <PageTitle>Create Update Run - KubeFleet UI</PageTitle>
@@ -56,6 +57,16 @@
         catch
         {
             // Strategy list may fail if not connected
+        }
+
+        try
+        {
+            var clusterStrategies = await ClusterStrategyService.ListAsync();
+            _strategyNames.AddRange(clusterStrategies.Select(s => s.Metadata.Name));
+        }
+        catch
+        {
+            // Cluster strategy list may fail if not connected
         }
     }
 
