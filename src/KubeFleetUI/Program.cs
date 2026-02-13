@@ -1,4 +1,3 @@
-using KubeFleetUI.Dapr;
 using KubeFleetUI.Services;
 using Microsoft.FluentUI.AspNetCore.Components;
 
@@ -8,14 +7,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddFluentUIComponents();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
-
-// Dapr (optional — only register if Dapr sidecar is available)
-if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DAPR_HTTP_PORT")))
-{
-    builder.Services.AddSingleton(_ => new Dapr.Client.DaprClientBuilder().Build());
-    builder.Services.AddSingleton<IDaprStateStore, DaprStateStore>();
-    builder.Services.AddSingleton<IDaprSecretStore, DaprSecretStore>();
-}
 
 // Kubernetes services
 builder.Services.AddSingleton<IKubernetesClientFactory, KubernetesClientFactory>();
