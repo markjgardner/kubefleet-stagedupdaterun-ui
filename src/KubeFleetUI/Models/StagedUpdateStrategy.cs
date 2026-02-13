@@ -5,7 +5,7 @@ namespace KubeFleetUI.Models;
 public class StagedUpdateStrategy
 {
     [JsonPropertyName("apiVersion")]
-    public string ApiVersion { get; set; } = "placement.kubefleet.io/v1beta1";
+    public string ApiVersion { get; set; } = "placement.kubernetes-fleet.io/v1beta1";
 
     [JsonPropertyName("kind")]
     public string Kind { get; set; } = "StagedUpdateStrategy";
