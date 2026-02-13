@@ -1,0 +1,19 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "KubeFleetUI",
+      "type": "dotnet",
+      "request": "launch",
+      "projectPath": "${workspaceFolder}/src/KubeFleetUI/KubeFleetUI.csproj",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    {
+      "name": "KubeFleetUI (Attach)",
+      "type": "dotnet",
+      "request": "attach"
+    }
+  ]
+}

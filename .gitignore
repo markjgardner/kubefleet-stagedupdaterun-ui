@@ -8,3 +8,4 @@ obj/
 .idea/
 *.DotSettings.user
 publish/
+appsettings.Development.json

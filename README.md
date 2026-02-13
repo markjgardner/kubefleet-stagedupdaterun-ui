@@ -53,6 +53,7 @@ Configure the Kubernetes API server URL in `appsettings.json` or `appsettings.De
 {
   "Kubernetes": {
     "ApiServerUrl": "https://<hub-cluster-api>:443",
+    "CertificateAuthorityData": "<Encoded CA>",
     "DefaultNamespace": "fleet-default"
   }
 }

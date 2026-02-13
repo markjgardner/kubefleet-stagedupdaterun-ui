@@ -22,7 +22,7 @@ public class UpdateRunService : IUpdateRunService
         _logger = logger;
     }
 
-    private string DefaultNamespace => _configuration["Kubernetes:DefaultNamespace"] ?? "fleet-default";
+    private string DefaultNamespace => _configuration["Kubernetes:DefaultNamespace"] ?? "default";
 
     public async Task<List<StagedUpdateRun>> ListAsync(string? namespaceFilter = null)
     {
