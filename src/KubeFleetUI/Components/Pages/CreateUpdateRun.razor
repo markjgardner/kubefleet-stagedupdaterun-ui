@@ -1,7 +1,10 @@
 @page "/create"
 @inject IUpdateRunService UpdateRunService
+@inject IClusterUpdateRunService ClusterUpdateRunService
 @inject IStrategyService StrategyService
 @inject IClusterStrategyService ClusterStrategyService
+@inject IPlacementService PlacementService
+@inject IClusterPlacementService ClusterPlacementService
 @inject NavigationManager Navigation
 
 <PageTitle>Create Update Run - KubeFleet UI</PageTitle>
@@ -17,13 +20,19 @@
     <DataAnnotationsValidator />
     <FluentStack Orientation="Orientation.Vertical" VerticalGap="16">
         <div>
+            <FluentSelect @bind-Value="_model.ResourceType" Label="Resource Type" TOption="string" Items="@_resourceTypes" Style="width: 100%;" @bind-Value:after="OnResourceTypeChanged" />
+        </div>
+        <div>
             <FluentTextField @bind-Value="_model.Name" Label="Name" Required="true" Style="width: 100%;" />
         </div>
+        @if (!IsClusterScoped)
+        {
+            <div>
+                <FluentTextField @bind-Value="_model.Namespace" Label="Namespace" Style="width: 100%;" />
+            </div>
+        }
         <div>
-            <FluentTextField @bind-Value="_model.Namespace" Label="Namespace" Style="width: 100%;" />
-        </div>
-        <div>
-            <FluentTextField @bind-Value="_model.PlacementName" Label="Placement Name" Required="true" Style="width: 100%;" />
+            <FluentSelect @bind-Value="_model.PlacementName" Label="Placement" TOption="string" Items="@_placementNames" Style="width: 100%;" />
         </div>
         <div>
             <FluentSelect @bind-Value="_model.StrategyName" Label="Strategy" TOption="string" Items="@_strategyNames" Style="width: 100%;" />
@@ -43,30 +52,74 @@
 @code {
     private CreateRunModel _model = new();
     private List<string> _strategyNames = new();
+    private List<string> _placementNames = new();
+    private List<string> _resourceTypes = new() { "StagedUpdateRun", "ClusterStagedUpdateRun" };
     private List<string> _states = new() { "Initialize", "Run" };
     private bool _submitting;
     private string? _error;
 
+    private bool IsClusterScoped => _model.ResourceType == "ClusterStagedUpdateRun";
+
     protected override async Task OnInitializedAsync()
     {
-        try
-        {
-            var strategies = await StrategyService.ListAsync();
-            _strategyNames = strategies.Select(s => s.Metadata.Name).ToList();
-        }
-        catch
-        {
-            // Strategy list may fail if not connected
-        }
+        await LoadScopedData();
+    }
 
-        try
+    private async Task OnResourceTypeChanged()
+    {
+        _model.StrategyName = string.Empty;
+        _model.PlacementName = string.Empty;
+        await LoadScopedData();
+    }
+
+    private async Task LoadScopedData()
+    {
+        _strategyNames = new List<string>();
+        _placementNames = new List<string>();
+
+        if (IsClusterScoped)
         {
-            var clusterStrategies = await ClusterStrategyService.ListAsync();
-            _strategyNames.AddRange(clusterStrategies.Select(s => s.Metadata.Name));
+            try
+            {
+                var clusterStrategies = await ClusterStrategyService.ListAsync();
+                _strategyNames = clusterStrategies.Select(s => s.Metadata.Name).ToList();
+            }
+            catch
+            {
+                // Cluster strategy list may fail if not connected
+            }
+
+            try
+            {
+                var clusterPlacements = await ClusterPlacementService.ListAsync();
+                _placementNames = clusterPlacements.Select(p => p.Metadata.Name).ToList();
+            }
+            catch
+            {
+                // Cluster placement list may fail if not connected
+            }
         }
-        catch
+        else
         {
-            // Cluster strategy list may fail if not connected
+            try
+            {
+                var strategies = await StrategyService.ListAsync();
+                _strategyNames = strategies.Select(s => s.Metadata.Name).ToList();
+            }
+            catch
+            {
+                // Strategy list may fail if not connected
+            }
+
+            try
+            {
+                var placements = await PlacementService.ListAsync();
+                _placementNames = placements.Select(p => p.Metadata.Name).ToList();
+            }
+            catch
+            {
+                // Placement list may fail if not connected
+            }
         }
     }
 
@@ -76,24 +129,47 @@
         _error = null;
         try
         {
-            var run = new StagedUpdateRun
+            if (IsClusterScoped)
             {
-                Metadata = new ResourceMetadata
+                var run = new ClusterStagedUpdateRun
                 {
-                    Name = _model.Name,
-                    Namespace = string.IsNullOrWhiteSpace(_model.Namespace) ? null : _model.Namespace
-                },
-                Spec = new UpdateRunSpec
-                {
-                    PlacementName = _model.PlacementName,
-                    StagedUpdateStrategyName = _model.StrategyName,
-                    ResourceSnapshotIndex = string.IsNullOrWhiteSpace(_model.ResourceSnapshotIndex) ? null : _model.ResourceSnapshotIndex,
-                    State = Enum.Parse<UpdateRunState>(_model.InitialState)
-                }
-            };
+                    Metadata = new ResourceMetadata
+                    {
+                        Name = _model.Name
+                    },
+                    Spec = new UpdateRunSpec
+                    {
+                        PlacementName = _model.PlacementName,
+                        StagedUpdateStrategyName = _model.StrategyName,
+                        ResourceSnapshotIndex = string.IsNullOrWhiteSpace(_model.ResourceSnapshotIndex) ? null : _model.ResourceSnapshotIndex,
+                        State = Enum.Parse<UpdateRunState>(_model.InitialState)
+                    }
+                };
 
-            var created = await UpdateRunService.CreateAsync(run);
-            Navigation.NavigateTo($"/run/{created.Metadata.Namespace}/{created.Metadata.Name}");
+                var created = await ClusterUpdateRunService.CreateAsync(run);
+                Navigation.NavigateTo($"/run/{created.Metadata.Name}");
+            }
+            else
+            {
+                var run = new StagedUpdateRun
+                {
+                    Metadata = new ResourceMetadata
+                    {
+                        Name = _model.Name,
+                        Namespace = string.IsNullOrWhiteSpace(_model.Namespace) ? null : _model.Namespace
+                    },
+                    Spec = new UpdateRunSpec
+                    {
+                        PlacementName = _model.PlacementName,
+                        StagedUpdateStrategyName = _model.StrategyName,
+                        ResourceSnapshotIndex = string.IsNullOrWhiteSpace(_model.ResourceSnapshotIndex) ? null : _model.ResourceSnapshotIndex,
+                        State = Enum.Parse<UpdateRunState>(_model.InitialState)
+                    }
+                };
+
+                var created = await UpdateRunService.CreateAsync(run);
+                Navigation.NavigateTo($"/run/{created.Metadata.Namespace}/{created.Metadata.Name}");
+            }
         }
         catch (Exception ex)
         {
@@ -107,6 +183,7 @@
 
     private class CreateRunModel
     {
+        public string ResourceType { get; set; } = "StagedUpdateRun";
         public string Name { get; set; } = string.Empty;
         public string Namespace { get; set; } = string.Empty;
         public string PlacementName { get; set; } = string.Empty;
