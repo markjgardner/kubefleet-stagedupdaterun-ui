@@ -96,6 +96,11 @@ public class KubernetesClusterFixture : IDisposable
                 await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
                 retryCount++;
             }
+            catch (HttpOperationException) when (retryCount >= maxRetries)
+            {
+                // Re-throw after exhausting retries
+                throw;
+            }
         }
     }
 
@@ -104,11 +109,42 @@ public class KubernetesClusterFixture : IDisposable
     /// </summary>
     public async Task WithRetryAsync(Func<Task> operation, int maxRetries = 5)
     {
-        await WithRetryAsync(async () =>
+        int retryCount = 0;
+        while (true)
         {
-            await operation();
-            return true; // Dummy return value
-        }, maxRetries);
+            try
+            {
+                await operation();
+                return;
+            }
+            catch (HttpOperationException ex) when (ex.Response?.StatusCode == System.Net.HttpStatusCode.TooManyRequests && retryCount < maxRetries)
+            {
+                // Extract retry-after seconds from response if available, otherwise use exponential backoff
+                int delaySeconds = 1;
+                if (ex.Response?.Content != null && ex.Response.Content.Contains("retryAfterSeconds"))
+                {
+                    // Parse the retryAfterSeconds from the response if present
+                    var match = System.Text.RegularExpressions.Regex.Match(ex.Response.Content, @"""retryAfterSeconds"":(\d+)");
+                    if (match.Success && int.TryParse(match.Groups[1].Value, out int parsedDelay))
+                    {
+                        delaySeconds = parsedDelay;
+                    }
+                }
+                else
+                {
+                    // Use exponential backoff: 1s, 2s, 4s, 8s, 16s
+                    delaySeconds = (int)Math.Pow(2, retryCount);
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+                retryCount++;
+            }
+            catch (HttpOperationException) when (retryCount >= maxRetries)
+            {
+                // Re-throw after exhausting retries
+                throw;
+            }
+        }
     }
 
     public void Dispose()
