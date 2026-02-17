@@ -13,6 +13,11 @@
     background: #dff6dd;
 }
 
+.stage-failed {
+    border-color: #c50f1f;
+    background: #fde7e9;
+}
+
 .stage-active {
     border-color: #0078d4;
     background: #deecf9;

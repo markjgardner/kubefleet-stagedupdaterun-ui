@@ -15,12 +15,58 @@
     flex-wrap: wrap;
 }
 
-.pipeline {
+.status-legend {
+    display: flex;
+    gap: 1rem;
+    margin: 1rem 0;
+    padding: 0.75rem;
+    background: #f3f2f1;
+    border-radius: 4px;
+    flex-wrap: wrap;
+}
+
+.legend-item {
     display: flex;
     align-items: center;
-    overflow-x: auto;
+    gap: 0.5rem;
+    font-size: 0.875em;
+}
+
+.legend-color {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    border: 2px solid;
+}
+
+.legend-color.stage-succeeded {
+    border-color: #0e700e;
+    background: #dff6dd;
+}
+
+.legend-color.stage-active {
+    border-color: #0078d4;
+    background: #deecf9;
+}
+
+.legend-color.stage-pending {
+    border-color: #8a8886;
+    background: #edebe9;
+}
+
+.legend-color.stage-failed {
+    border-color: #c50f1f;
+    background: #fde7e9;
+}
+
+.pipeline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     padding: 2rem 0;
     gap: 0;
+    row-gap: 1rem;
 }
 
 .pipeline-node {

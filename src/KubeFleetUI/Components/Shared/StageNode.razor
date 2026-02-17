@@ -29,9 +29,47 @@
 
     private string GetStageClass()
     {
+        // Check stage-level conditions first
         var succeeded = Stage.Conditions?.FirstOrDefault(c => c.Type == "Succeeded");
         if (succeeded?.Status == "True") return "stage-succeeded";
 
+        // Check cluster statuses to determine stage state
+        if (Stage.Clusters.Any())
+        {
+            // Flatten all cluster conditions for easier checking
+            var allClusterConditions = Stage.Clusters
+                .Where(c => c.Conditions != null && c.Conditions.Any())
+                .SelectMany(c => c.Conditions!)
+                .ToList();
+
+            if (!allClusterConditions.Any())
+            {
+                // No conditions available yet, stage is pending
+                return Stage.StartTime.HasValue ? "stage-active" : "stage-pending";
+            }
+
+            // Check if any cluster has failed
+            var anyFailed = allClusterConditions
+                .Any(cond => cond.Type == "Succeeded" && cond.Status == "False");
+            if (anyFailed) return "stage-failed";
+
+            // Check if all clusters have succeeded
+            var clustersWithConditions = Stage.Clusters
+                .Count(c => c.Conditions != null && c.Conditions.Any());
+            var succeededCount = Stage.Clusters
+                .Count(c => c.Conditions?.Any(cond => cond.Type == "Succeeded" && cond.Status == "True") == true);
+            if (clustersWithConditions > 0 && succeededCount == clustersWithConditions)
+            {
+                return "stage-succeeded";
+            }
+
+            // Check if any cluster has started
+            var anyStarted = allClusterConditions
+                .Any(cond => cond.Type == "Started" && cond.Status == "True");
+            if (anyStarted) return "stage-active";
+        }
+
+        // Fall back to stage conditions
         var progressing = Stage.Conditions?.FirstOrDefault(c => c.Type == "Progressing");
         if (progressing?.Status == "True") return "stage-active";
         if (progressing?.Status == "False") return "stage-waiting";
