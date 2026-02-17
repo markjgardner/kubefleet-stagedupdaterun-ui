@@ -11,6 +11,9 @@ namespace KubeFleetUI.Tests.Integration;
 /// </summary>
 public class KubernetesClusterFixture : IDisposable
 {
+    private static readonly System.Text.RegularExpressions.Regex RetryAfterRegex = 
+        new(@"""retryAfterSeconds"":(\d+)", System.Text.RegularExpressions.RegexOptions.Compiled);
+
     public IKubernetes Client { get; }
     public string TestNamespace { get; }
 
@@ -121,23 +124,18 @@ public class KubernetesClusterFixture : IDisposable
     private int CalculateRetryDelay(HttpOperationException ex, int retryCount)
     {
         // Extract retry-after seconds from response if available, otherwise use exponential backoff
-        int delaySeconds = 1;
         if (ex.Response?.Content != null && ex.Response.Content.Contains("retryAfterSeconds"))
         {
             // Parse the retryAfterSeconds from the response if present
-            var match = System.Text.RegularExpressions.Regex.Match(ex.Response.Content, @"""retryAfterSeconds"":(\d+)");
+            var match = RetryAfterRegex.Match(ex.Response.Content);
             if (match.Success && int.TryParse(match.Groups[1].Value, out int parsedDelay))
             {
-                delaySeconds = parsedDelay;
+                return parsedDelay;
             }
         }
-        else
-        {
-            // Use exponential backoff: 1s, 2s, 4s, 8s, 16s
-            delaySeconds = (int)Math.Pow(2, retryCount);
-        }
 
-        return delaySeconds;
+        // Use exponential backoff: 1s, 2s, 4s, 8s, 16s
+        return (int)Math.Pow(2, retryCount);
     }
 
     public void Dispose()
