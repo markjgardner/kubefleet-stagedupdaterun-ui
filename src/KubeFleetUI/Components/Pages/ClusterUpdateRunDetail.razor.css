@@ -17,10 +17,11 @@
 
 .pipeline {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    overflow-x: auto;
     padding: 2rem 0;
     gap: 0;
+    row-gap: 1rem;
 }
 
 .pipeline-node {

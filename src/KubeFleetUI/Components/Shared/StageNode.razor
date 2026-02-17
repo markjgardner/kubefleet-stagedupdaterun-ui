@@ -29,9 +29,30 @@
 
     private string GetStageClass()
     {
+        // Check stage-level conditions first
         var succeeded = Stage.Conditions?.FirstOrDefault(c => c.Type == "Succeeded");
         if (succeeded?.Status == "True") return "stage-succeeded";
 
+        // Check cluster statuses to determine stage state
+        if (Stage.Clusters.Any())
+        {
+            // Check if any cluster has failed
+            var anyFailed = Stage.Clusters.Any(c =>
+                c.Conditions?.Any(cond => cond.Type == "Succeeded" && cond.Status == "False") == true);
+            if (anyFailed) return "stage-failed";
+
+            // Check if all clusters have succeeded
+            var allSucceeded = Stage.Clusters.All(c =>
+                c.Conditions?.Any(cond => cond.Type == "Succeeded" && cond.Status == "True") == true);
+            if (allSucceeded) return "stage-succeeded";
+
+            // Check if any cluster has started
+            var anyStarted = Stage.Clusters.Any(c =>
+                c.Conditions?.Any(cond => cond.Type == "Started" && cond.Status == "True") == true);
+            if (anyStarted) return "stage-active";
+        }
+
+        // Fall back to stage conditions
         var progressing = Stage.Conditions?.FirstOrDefault(c => c.Type == "Progressing");
         if (progressing?.Status == "True") return "stage-active";
         if (progressing?.Status == "False") return "stage-waiting";
