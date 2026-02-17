@@ -133,6 +133,9 @@ jobs:
   deploy:
     needs: tag-and-push
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
