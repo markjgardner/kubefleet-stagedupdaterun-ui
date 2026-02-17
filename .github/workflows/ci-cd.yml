@@ -59,6 +59,7 @@ jobs:
 
       - name: Run integration tests
         run: |
+          export KUBECONFIG=$HOME/.kube/config
           dotnet test --no-build --configuration Release --filter Category=Integration --verbosity normal --logger "console;verbosity=detailed"
 
       - name: Cleanup Kind cluster
