@@ -1,5 +1,6 @@
 @page "/"
 @inject IUpdateRunService UpdateRunService
+@inject IClusterUpdateRunService ClusterUpdateRunService
 @inject NavigationManager Navigation
 
 <PageTitle>Dashboard - KubeFleet UI</PageTitle>
@@ -28,12 +29,15 @@ else if (_error != null)
 else
 {
     <FluentDataGrid Items="@_runs" ResizableColumns="true" Style="margin-top: 1rem;">
-        <PropertyColumn Property="@(r => r.Metadata.Name)" Title="Name" Sortable="true" />
-        <PropertyColumn Property="@(r => r.Metadata.Namespace)" Title="Namespace" Sortable="true" />
-        <PropertyColumn Property="@(r => r.Spec.PlacementName)" Title="Placement" Sortable="true" />
-        <PropertyColumn Property="@(r => r.Spec.StagedUpdateStrategyName)" Title="Strategy" Sortable="true" />
+        <PropertyColumn Property="@(r => r.Name)" Title="Name" Sortable="true" />
+        <TemplateColumn Title="Kind" Sortable="true">
+            <FluentBadge Appearance="@(context.IsClusterScoped ? Appearance.Accent : Appearance.Neutral)">@context.Kind</FluentBadge>
+        </TemplateColumn>
+        <PropertyColumn Property="@(r => r.Namespace)" Title="Namespace" Sortable="true" />
+        <PropertyColumn Property="@(r => r.PlacementName)" Title="Placement" Sortable="true" />
+        <PropertyColumn Property="@(r => r.StrategyName)" Title="Strategy" Sortable="true" />
         <TemplateColumn Title="State">
-            <FluentBadge Appearance="Appearance.Accent">@context.Spec.State</FluentBadge>
+            <FluentBadge Appearance="Appearance.Accent">@context.State</FluentBadge>
         </TemplateColumn>
         <TemplateColumn Title="Initialized">
             @{
@@ -54,10 +58,10 @@ else
             <FluentBadge BackgroundColor="@GetStatusColor(succ)">@succ</FluentBadge>
         </TemplateColumn>
         <TemplateColumn Title="Age">
-            @FormatAge(context.Metadata.CreationTimestamp)
+            @FormatAge(context.CreationTimestamp)
         </TemplateColumn>
         <TemplateColumn Title="Actions">
-            <FluentButton Appearance="Appearance.Lightweight" OnClick="@(() => Navigation.NavigateTo($"/run/{context.Metadata.Namespace}/{context.Metadata.Name}"))">
+            <FluentButton Appearance="Appearance.Lightweight" OnClick="@(() => NavigateToDetail(context))">
                 View
             </FluentButton>
         </TemplateColumn>
@@ -65,7 +69,7 @@ else
 }
 
 @code {
-    private IQueryable<StagedUpdateRun>? _runs;
+    private IQueryable<UpdateRunViewModel>? _runs;
     private bool _loading = true;
     private string? _error;
 
@@ -80,8 +84,15 @@ else
         _error = null;
         try
         {
-            var list = await UpdateRunService.ListAsync();
-            _runs = list.AsQueryable();
+            var viewModels = new List<UpdateRunViewModel>();
+
+            var namespacedRuns = await UpdateRunService.ListAsync();
+            viewModels.AddRange(namespacedRuns.Select(r => new UpdateRunViewModel(r)));
+
+            var clusterRuns = await ClusterUpdateRunService.ListAsync();
+            viewModels.AddRange(clusterRuns.Select(r => new UpdateRunViewModel(r)));
+
+            _runs = viewModels.AsQueryable();
         }
         catch (Exception ex)
         {
@@ -93,9 +104,21 @@ else
         }
     }
 
-    private string GetConditionStatus(StagedUpdateRun run, string conditionType)
+    private void NavigateToDetail(UpdateRunViewModel run)
     {
-        var condition = run.Status?.Conditions?.FirstOrDefault(c => c.Type == conditionType);
+        if (run.IsClusterScoped)
+        {
+            Navigation.NavigateTo($"/clusterrun/{run.Name}");
+        }
+        else
+        {
+            Navigation.NavigateTo($"/run/{run.Namespace}/{run.Name}");
+        }
+    }
+
+    private string GetConditionStatus(UpdateRunViewModel run, string conditionType)
+    {
+        var condition = run.Conditions?.FirstOrDefault(c => c.Type == conditionType);
         return condition?.Status ?? "—";
     }
 
@@ -113,5 +136,44 @@ else
         if (age.TotalDays >= 1) return $"{(int)age.TotalDays}d";
         if (age.TotalHours >= 1) return $"{(int)age.TotalHours}h";
         return $"{(int)age.TotalMinutes}m";
+    }
+
+    public class UpdateRunViewModel
+    {
+        public string Name { get; }
+        public string? Namespace { get; }
+        public string Kind { get; }
+        public bool IsClusterScoped { get; }
+        public string PlacementName { get; }
+        public string StrategyName { get; }
+        public UpdateRunState State { get; }
+        public DateTime? CreationTimestamp { get; }
+        public List<Condition>? Conditions { get; }
+
+        public UpdateRunViewModel(StagedUpdateRun run)
+        {
+            Name = run.Metadata.Name;
+            Namespace = run.Metadata.Namespace;
+            Kind = run.Kind;
+            IsClusterScoped = false;
+            PlacementName = run.Spec.PlacementName;
+            StrategyName = run.Spec.StagedUpdateStrategyName;
+            State = run.Spec.State;
+            CreationTimestamp = run.Metadata.CreationTimestamp;
+            Conditions = run.Status?.Conditions;
+        }
+
+        public UpdateRunViewModel(ClusterStagedUpdateRun run)
+        {
+            Name = run.Metadata.Name;
+            Namespace = null;
+            Kind = run.Kind;
+            IsClusterScoped = true;
+            PlacementName = run.Spec.PlacementName;
+            StrategyName = run.Spec.StagedUpdateStrategyName;
+            State = run.Spec.State;
+            CreationTimestamp = run.Metadata.CreationTimestamp;
+            Conditions = run.Status?.Conditions;
+        }
     }
 }
