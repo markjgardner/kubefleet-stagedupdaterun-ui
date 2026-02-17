@@ -36,19 +36,36 @@
         // Check cluster statuses to determine stage state
         if (Stage.Clusters.Any())
         {
+            // Flatten all cluster conditions for easier checking
+            var allClusterConditions = Stage.Clusters
+                .Where(c => c.Conditions != null && c.Conditions.Any())
+                .SelectMany(c => c.Conditions!)
+                .ToList();
+
+            if (!allClusterConditions.Any())
+            {
+                // No conditions available yet, stage is pending
+                return Stage.StartTime.HasValue ? "stage-active" : "stage-pending";
+            }
+
             // Check if any cluster has failed
-            var anyFailed = Stage.Clusters.Any(c =>
-                c.Conditions?.Any(cond => cond.Type == "Succeeded" && cond.Status == "False") == true);
+            var anyFailed = allClusterConditions
+                .Any(cond => cond.Type == "Succeeded" && cond.Status == "False");
             if (anyFailed) return "stage-failed";
 
             // Check if all clusters have succeeded
-            var allSucceeded = Stage.Clusters.All(c =>
-                c.Conditions?.Any(cond => cond.Type == "Succeeded" && cond.Status == "True") == true);
-            if (allSucceeded) return "stage-succeeded";
+            var clustersWithConditions = Stage.Clusters
+                .Count(c => c.Conditions != null && c.Conditions.Any());
+            var succeededCount = Stage.Clusters
+                .Count(c => c.Conditions?.Any(cond => cond.Type == "Succeeded" && cond.Status == "True") == true);
+            if (clustersWithConditions > 0 && succeededCount == clustersWithConditions)
+            {
+                return "stage-succeeded";
+            }
 
             // Check if any cluster has started
-            var anyStarted = Stage.Clusters.Any(c =>
-                c.Conditions?.Any(cond => cond.Type == "Started" && cond.Status == "True") == true);
+            var anyStarted = allClusterConditions
+                .Any(cond => cond.Type == "Started" && cond.Status == "True");
             if (anyStarted) return "stage-active";
         }
 
