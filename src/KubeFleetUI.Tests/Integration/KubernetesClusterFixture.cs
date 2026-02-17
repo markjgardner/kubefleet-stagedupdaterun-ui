@@ -1,4 +1,5 @@
 using k8s;
+using k8s.Autorest;
 using k8s.Models;
 using Microsoft.Extensions.Configuration;
 
@@ -58,6 +59,56 @@ public class KubernetesClusterFixture : IDisposable
         {
             throw new InvalidOperationException($"Failed to create test namespace: {ex.Message}", ex);
         }
+    }
+
+    /// <summary>
+    /// Executes an async operation with retry logic for transient Kubernetes API errors.
+    /// Specifically handles 429 TooManyRequests errors that occur when the API server storage is initializing.
+    /// </summary>
+    public async Task<T> WithRetryAsync<T>(Func<Task<T>> operation, int maxRetries = 5)
+    {
+        int retryCount = 0;
+        while (true)
+        {
+            try
+            {
+                return await operation();
+            }
+            catch (HttpOperationException ex) when (ex.Response?.StatusCode == System.Net.HttpStatusCode.TooManyRequests && retryCount < maxRetries)
+            {
+                // Extract retry-after seconds from response if available, otherwise use exponential backoff
+                int delaySeconds = 1;
+                if (ex.Response?.Content != null && ex.Response.Content.Contains("retryAfterSeconds"))
+                {
+                    // Parse the retryAfterSeconds from the response if present
+                    var match = System.Text.RegularExpressions.Regex.Match(ex.Response.Content, @"""retryAfterSeconds"":(\d+)");
+                    if (match.Success && int.TryParse(match.Groups[1].Value, out int parsedDelay))
+                    {
+                        delaySeconds = parsedDelay;
+                    }
+                }
+                else
+                {
+                    // Use exponential backoff: 1s, 2s, 4s, 8s, 16s
+                    delaySeconds = (int)Math.Pow(2, retryCount);
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+                retryCount++;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Executes an async operation with retry logic, handling cases where no return value is expected.
+    /// </summary>
+    public async Task WithRetryAsync(Func<Task> operation, int maxRetries = 5)
+    {
+        await WithRetryAsync(async () =>
+        {
+            await operation();
+            return true; // Dummy return value
+        }, maxRetries);
     }
 
     public void Dispose()
