@@ -74,32 +74,16 @@ public class KubernetesClusterFixture : IDisposable
             {
                 return await operation();
             }
-            catch (HttpOperationException ex) when (ex.Response?.StatusCode == System.Net.HttpStatusCode.TooManyRequests && retryCount < maxRetries)
+            catch (HttpOperationException ex) when (ex.Response?.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
             {
-                // Extract retry-after seconds from response if available, otherwise use exponential backoff
-                int delaySeconds = 1;
-                if (ex.Response?.Content != null && ex.Response.Content.Contains("retryAfterSeconds"))
+                if (retryCount >= maxRetries)
                 {
-                    // Parse the retryAfterSeconds from the response if present
-                    var match = System.Text.RegularExpressions.Regex.Match(ex.Response.Content, @"""retryAfterSeconds"":(\d+)");
-                    if (match.Success && int.TryParse(match.Groups[1].Value, out int parsedDelay))
-                    {
-                        delaySeconds = parsedDelay;
-                    }
-                }
-                else
-                {
-                    // Use exponential backoff: 1s, 2s, 4s, 8s, 16s
-                    delaySeconds = (int)Math.Pow(2, retryCount);
+                    throw;
                 }
 
+                var delaySeconds = CalculateRetryDelay(ex, retryCount);
                 await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
                 retryCount++;
-            }
-            catch (HttpOperationException) when (retryCount >= maxRetries)
-            {
-                // Re-throw after exhausting retries
-                throw;
             }
         }
     }
@@ -117,34 +101,43 @@ public class KubernetesClusterFixture : IDisposable
                 await operation();
                 return;
             }
-            catch (HttpOperationException ex) when (ex.Response?.StatusCode == System.Net.HttpStatusCode.TooManyRequests && retryCount < maxRetries)
+            catch (HttpOperationException ex) when (ex.Response?.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
             {
-                // Extract retry-after seconds from response if available, otherwise use exponential backoff
-                int delaySeconds = 1;
-                if (ex.Response?.Content != null && ex.Response.Content.Contains("retryAfterSeconds"))
+                if (retryCount >= maxRetries)
                 {
-                    // Parse the retryAfterSeconds from the response if present
-                    var match = System.Text.RegularExpressions.Regex.Match(ex.Response.Content, @"""retryAfterSeconds"":(\d+)");
-                    if (match.Success && int.TryParse(match.Groups[1].Value, out int parsedDelay))
-                    {
-                        delaySeconds = parsedDelay;
-                    }
-                }
-                else
-                {
-                    // Use exponential backoff: 1s, 2s, 4s, 8s, 16s
-                    delaySeconds = (int)Math.Pow(2, retryCount);
+                    throw;
                 }
 
+                var delaySeconds = CalculateRetryDelay(ex, retryCount);
                 await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
                 retryCount++;
             }
-            catch (HttpOperationException) when (retryCount >= maxRetries)
+        }
+    }
+
+    /// <summary>
+    /// Calculates the retry delay based on the API response or exponential backoff.
+    /// </summary>
+    private int CalculateRetryDelay(HttpOperationException ex, int retryCount)
+    {
+        // Extract retry-after seconds from response if available, otherwise use exponential backoff
+        int delaySeconds = 1;
+        if (ex.Response?.Content != null && ex.Response.Content.Contains("retryAfterSeconds"))
+        {
+            // Parse the retryAfterSeconds from the response if present
+            var match = System.Text.RegularExpressions.Regex.Match(ex.Response.Content, @"""retryAfterSeconds"":(\d+)");
+            if (match.Success && int.TryParse(match.Groups[1].Value, out int parsedDelay))
             {
-                // Re-throw after exhausting retries
-                throw;
+                delaySeconds = parsedDelay;
             }
         }
+        else
+        {
+            // Use exponential backoff: 1s, 2s, 4s, 8s, 16s
+            delaySeconds = (int)Math.Pow(2, retryCount);
+        }
+
+        return delaySeconds;
     }
 
     public void Dispose()
