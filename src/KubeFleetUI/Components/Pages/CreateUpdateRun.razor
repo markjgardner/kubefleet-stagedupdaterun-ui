@@ -147,7 +147,7 @@
                 };
 
                 var created = await ClusterUpdateRunService.CreateAsync(run);
-                Navigation.NavigateTo($"/run/{created.Metadata.Name}");
+                Navigation.NavigateTo("/");
             }
             else
             {
@@ -168,7 +168,7 @@
                 };
 
                 var created = await UpdateRunService.CreateAsync(run);
-                Navigation.NavigateTo($"/run/{created.Metadata.Namespace}/{created.Metadata.Name}");
+                Navigation.NavigateTo("/");
             }
         }
         catch (Exception ex)
