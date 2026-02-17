@@ -39,15 +39,18 @@ public class ApiGroupValidationTests : IClassFixture<KubernetesClusterFixture>
             }
         };
 
-        // Act - Create the resource using the correct API group
+        // Act - Create the resource using the correct API group with retry for transient errors
         var exception = await Record.ExceptionAsync(async () =>
         {
-            await client.CustomObjects.CreateNamespacedCustomObjectAsync(
-                testRun,
-                KubeFleetConstants.Group,
-                KubeFleetConstants.Version,
-                _fixture.TestNamespace,
-                KubeFleetConstants.StagedUpdateRunPlural);
+            await _fixture.WithRetryAsync(async () =>
+            {
+                await client.CustomObjects.CreateNamespacedCustomObjectAsync(
+                    testRun,
+                    KubeFleetConstants.Group,
+                    KubeFleetConstants.Version,
+                    _fixture.TestNamespace,
+                    KubeFleetConstants.StagedUpdateRunPlural);
+            });
         });
 
         // Assert - Should succeed if CRDs are installed with correct API group
@@ -120,15 +123,18 @@ public class ApiGroupValidationTests : IClassFixture<KubernetesClusterFixture>
             }
         };
 
-        // Act - Create the resource using the correct API group
+        // Act - Create the resource using the correct API group with retry for transient errors
         var exception = await Record.ExceptionAsync(async () =>
         {
-            await client.CustomObjects.CreateNamespacedCustomObjectAsync(
-                testApproval,
-                KubeFleetConstants.Group,
-                KubeFleetConstants.Version,
-                _fixture.TestNamespace,
-                KubeFleetConstants.ApprovalRequestPlural);
+            await _fixture.WithRetryAsync(async () =>
+            {
+                await client.CustomObjects.CreateNamespacedCustomObjectAsync(
+                    testApproval,
+                    KubeFleetConstants.Group,
+                    KubeFleetConstants.Version,
+                    _fixture.TestNamespace,
+                    KubeFleetConstants.ApprovalRequestPlural);
+            });
         });
 
         // Assert - Should succeed if CRDs are installed with correct API group
@@ -153,14 +159,17 @@ public class ApiGroupValidationTests : IClassFixture<KubernetesClusterFixture>
         // Arrange
         var client = _fixture.Client;
 
-        // Act - List resources using the correct API group
+        // Act - List resources using the correct API group with retry for transient errors
         var exception = await Record.ExceptionAsync(async () =>
         {
-            await client.CustomObjects.ListNamespacedCustomObjectAsync(
-                KubeFleetConstants.Group,
-                KubeFleetConstants.Version,
-                _fixture.TestNamespace,
-                KubeFleetConstants.StagedUpdateRunPlural);
+            await _fixture.WithRetryAsync(async () =>
+            {
+                await client.CustomObjects.ListNamespacedCustomObjectAsync(
+                    KubeFleetConstants.Group,
+                    KubeFleetConstants.Version,
+                    _fixture.TestNamespace,
+                    KubeFleetConstants.StagedUpdateRunPlural);
+            });
         });
 
         // Assert - Should succeed (may return empty list)

@@ -1,4 +1,5 @@
 using k8s;
+using k8s.Autorest;
 using k8s.Models;
 using Microsoft.Extensions.Configuration;
 
@@ -10,6 +11,9 @@ namespace KubeFleetUI.Tests.Integration;
 /// </summary>
 public class KubernetesClusterFixture : IDisposable
 {
+    private static readonly System.Text.RegularExpressions.Regex RetryAfterRegex = 
+        new(@"""retryAfterSeconds""\s*:\s*(\d+)", System.Text.RegularExpressions.RegexOptions.Compiled);
+
     public IKubernetes Client { get; }
     public string TestNamespace { get; }
 
@@ -58,6 +62,79 @@ public class KubernetesClusterFixture : IDisposable
         {
             throw new InvalidOperationException($"Failed to create test namespace: {ex.Message}", ex);
         }
+    }
+
+    /// <summary>
+    /// Executes an async operation with retry logic for transient Kubernetes API errors.
+    /// Specifically handles 429 TooManyRequests errors that occur when the API server storage is initializing.
+    /// </summary>
+    public async Task<T> WithRetryAsync<T>(Func<Task<T>> operation, int maxRetries = 5)
+    {
+        int retryCount = 0;
+        while (true)
+        {
+            try
+            {
+                return await operation();
+            }
+            catch (HttpOperationException ex) when (ex.Response?.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+            {
+                if (retryCount >= maxRetries)
+                {
+                    throw;
+                }
+
+                var delaySeconds = CalculateRetryDelay(ex, retryCount);
+                await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+                retryCount++;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Executes an async operation with retry logic, handling cases where no return value is expected.
+    /// </summary>
+    public async Task WithRetryAsync(Func<Task> operation, int maxRetries = 5)
+    {
+        int retryCount = 0;
+        while (true)
+        {
+            try
+            {
+                await operation();
+                return;
+            }
+            catch (HttpOperationException ex) when (ex.Response?.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+            {
+                if (retryCount >= maxRetries)
+                {
+                    throw;
+                }
+
+                var delaySeconds = CalculateRetryDelay(ex, retryCount);
+                await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+                retryCount++;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Calculates the retry delay based on the API response or exponential backoff.
+    /// </summary>
+    private int CalculateRetryDelay(HttpOperationException ex, int retryCount)
+    {
+        // Extract retry-after seconds from response if available
+        if (ex.Response?.Content != null)
+        {
+            var match = RetryAfterRegex.Match(ex.Response.Content);
+            if (match.Success && int.TryParse(match.Groups[1].Value, out int parsedDelay))
+            {
+                return parsedDelay;
+            }
+        }
+
+        // Use exponential backoff: 1s, 2s, 4s, 8s, 16s (2^0, 2^1, 2^2, 2^3, 2^4)
+        return 1 << retryCount;
     }
 
     public void Dispose()
