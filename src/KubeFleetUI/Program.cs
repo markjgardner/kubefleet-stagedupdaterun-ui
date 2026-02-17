@@ -11,8 +11,11 @@ builder.Services.AddRazorComponents()
 // Kubernetes services
 builder.Services.AddSingleton<IKubernetesClientFactory, KubernetesClientFactory>();
 builder.Services.AddScoped<IUpdateRunService, UpdateRunService>();
+builder.Services.AddScoped<IClusterUpdateRunService, ClusterUpdateRunService>();
 builder.Services.AddScoped<IStrategyService, StrategyService>();
 builder.Services.AddScoped<IClusterStrategyService, ClusterStrategyService>();
+builder.Services.AddScoped<IPlacementService, PlacementService>();
+builder.Services.AddScoped<IClusterPlacementService, ClusterPlacementService>();
 builder.Services.AddScoped<IApprovalService, ApprovalService>();
 
 var app = builder.Build();

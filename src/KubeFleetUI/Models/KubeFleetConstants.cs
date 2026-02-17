@@ -8,6 +8,9 @@ public static class KubeFleetConstants
     public const string ClusterStagedUpdateRunPlural = "clusterstagedupdateruns";
     public const string StagedUpdateStrategyPlural = "stagedupdatestrategies";
     public const string ClusterStagedUpdateStrategyPlural = "clusterstagedupdatestrategies";
+    public const string ClusterResourcePlacementPlural = "clusterresourceplacements";
+    public const string ResourcePlacementPlural = "resourceplacements";
+    public const string PlacementVersion = "v1";
     public const string ApprovalRequestPlural = "approvalrequests";
     public const string ClusterApprovalRequestPlural = "clusterapprovalrequests";
 
