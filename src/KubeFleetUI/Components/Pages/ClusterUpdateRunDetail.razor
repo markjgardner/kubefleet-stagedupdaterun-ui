@@ -1,0 +1,180 @@
+@page "/clusterrun/{Name}"
+@inject IClusterUpdateRunService ClusterUpdateRunService
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<PageTitle>@Name - KubeFleet UI</PageTitle>
+
+@if (_loading)
+{
+    <FluentProgress />
+}
+else if (_error != null)
+{
+    <FluentMessageBar Title="Error" Intent="MessageIntent.Error">@_error</FluentMessageBar>
+}
+else if (_run != null)
+{
+    <div class="detail-header">
+        <h1>@_run.Metadata.Name</h1>
+        <div class="header-info">
+            <FluentBadge Appearance="Appearance.Accent">Cluster-scoped</FluentBadge>
+            <FluentBadge>Placement: @_run.Spec.PlacementName</FluentBadge>
+            <FluentBadge>Strategy: @_run.Spec.StagedUpdateStrategyName</FluentBadge>
+            <FluentBadge Appearance="Appearance.Accent">State: @_run.Spec.State</FluentBadge>
+        </div>
+        <div class="header-conditions">
+            @if (_run.Status?.Conditions != null)
+            {
+                @foreach (var c in _run.Status.Conditions)
+                {
+                    <FluentBadge BackgroundColor="@GetConditionColor(c)">@c.Type: @c.Status</FluentBadge>
+                }
+            }
+        </div>
+        <FluentToolbar Style="margin-top: 0.5rem;">
+            @if (_run.Spec.State == UpdateRunState.Initialize)
+            {
+                <FluentButton Appearance="Appearance.Accent" OnClick="@(() => ChangeState(UpdateRunState.Run))">Start</FluentButton>
+            }
+            @if (_run.Spec.State == UpdateRunState.Run)
+            {
+                <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => ChangeState(UpdateRunState.Stop))">Stop</FluentButton>
+            }
+            @if (_run.Spec.State == UpdateRunState.Stop)
+            {
+                <FluentButton Appearance="Appearance.Accent" OnClick="@(() => ChangeState(UpdateRunState.Run))">Resume</FluentButton>
+            }
+            <FluentButton Appearance="Appearance.Outline" OnClick="@ShowDeleteConfirm">Delete</FluentButton>
+            <FluentButton Appearance="Appearance.Lightweight" OnClick="@Refresh">Refresh</FluentButton>
+        </FluentToolbar>
+    </div>
+
+    @* Pipeline Flowchart *@
+    <div class="pipeline">
+        <div class="pipeline-node strategy-node">
+            <strong>Strategy</strong>
+            <div>@_run.Spec.StagedUpdateStrategyName</div>
+        </div>
+
+        @if (_run.Status?.StagesStatus != null)
+        {
+            @foreach (var stage in _run.Status.StagesStatus)
+            {
+                <PipelineConnector />
+
+                @if (stage.BeforeStageTaskStatus != null)
+                {
+                    @foreach (var task in stage.BeforeStageTaskStatus)
+                    {
+                        <TaskNode Task="@task" TaskPosition="before" />
+                        <PipelineConnector />
+                    }
+                }
+
+                <StageNode Stage="@stage" />
+
+                @if (stage.AfterStageTaskStatus != null)
+                {
+                    @foreach (var task in stage.AfterStageTaskStatus)
+                    {
+                        <PipelineConnector />
+                        <TaskNode Task="@task" TaskPosition="after" />
+                    }
+                }
+            }
+        }
+
+        @if (_run.Status?.DeletionStageStatus != null)
+        {
+            <PipelineConnector />
+            <StageNode Stage="@_run.Status.DeletionStageStatus" IsDeletionStage="true" />
+        }
+
+        <PipelineConnector />
+        <div class="pipeline-node done-node">
+            <strong>Done</strong>
+        </div>
+    </div>
+
+    @if (_showDeleteConfirm)
+    {
+        <ConfirmDialog Title="Delete Cluster Update Run"
+                       Message="@($"Are you sure you want to delete cluster update run '{_run.Metadata.Name}'?")"
+                       OnConfirm="@DeleteRun"
+                       OnCancel="@(() => _showDeleteConfirm = false)" />
+    }
+}
+
+@code {
+    [Parameter] public string Name { get; set; } = string.Empty;
+
+    private ClusterStagedUpdateRun? _run;
+    private bool _loading = true;
+    private string? _error;
+    private bool _showDeleteConfirm;
+    private CancellationTokenSource _cts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Refresh();
+    }
+
+    private async Task Refresh()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _run = await ClusterUpdateRunService.GetAsync(Name);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ChangeState(UpdateRunState newState)
+    {
+        try
+        {
+            _run = await ClusterUpdateRunService.UpdateStateAsync(Name, newState);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private void ShowDeleteConfirm() => _showDeleteConfirm = true;
+
+    private async Task DeleteRun()
+    {
+        try
+        {
+            await ClusterUpdateRunService.DeleteAsync(Name);
+            Navigation.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private string GetConditionColor(Condition c) => c.Status switch
+    {
+        "True" => "#0E700E",
+        "False" => "#C50F1F",
+        _ => "#616161"
+    };
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}
